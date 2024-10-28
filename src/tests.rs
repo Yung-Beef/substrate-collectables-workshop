@@ -105,3 +105,28 @@ fn create_kitty_checks_signed() {
         assert_noop!(PalletKitties::create_kitty(RuntimeOrigin::none()), DispatchError::BadOrigin);
     })
 }
+
+#[test]
+fn create_kitty_emits_events() {
+	new_test_ext().execute_with(|| {
+		// We need to set block number to 1 to view events.
+		System::set_block_number(1);
+		// Execute our call, and ensure it is successful.
+		assert_ok!(PalletKitties::create_kitty(RuntimeOrigin::signed(ALICE)));
+		// Assert the last event by our blockchain is the `Created` event with the correct owner.
+		System::assert_last_event(Event::<TestRuntime>::Created { owner: ALICE }.into());
+	})
+}
+
+#[test]
+fn count_for_kitties_created_correctly() {
+	new_test_ext().execute_with(|| {
+		// Querying storage before anything is set will return `None`.
+		assert_eq!(CountForKitties::<TestRuntime>::get(), None);
+		// You can `set` the value using an `Option<u32>`.
+		CountForKitties::<TestRuntime>::set(Some(1337u32));
+		// You can `put` the value directly with a `u32`.
+		CountForKitties::<TestRuntime>::put(1337u32);
+		assert_eq!(CountForKitties::<TestRuntime>::get(), Some(1337u32));
+	})
+}
