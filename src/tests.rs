@@ -27,7 +27,7 @@ type Block = frame_system::mocking::MockBlock<TestRuntime>;
 // We create the constants `ALICE` and `BOB` to make it clear when we are representing users below.
 const ALICE: u64 = 1;
 const BOB: u64 = 2;
-const DEFAULT_KITTY: Kitty<TestRuntime> = Kitty { dna: [0u8; 32], owner: 0 };
+const DEFAULT_KITTY: Kitty<TestRuntime> = Kitty { dna: [0u8; 32], owner: 0, price: None };
 
 // Our blockchain tests only need 3 Pallets:
 // 1. System: Which is included with every FRAME runtime.
@@ -61,6 +61,7 @@ impl pallet_balances::Config for TestRuntime {
 // will also need to update this configuration to represent that.
 impl pallet_kitties::Config for TestRuntime {
 	type RuntimeEvent = RuntimeEvent;
+	type NativeBalance = Balances;
 }
 
 // We need to run most of our tests using this function: `new_test_ext().execute_with(|| { ... });`
@@ -99,12 +100,12 @@ fn system_and_balances_work() {
 
 #[test]
 fn create_kitty_checks_signed() {
-    new_test_ext().execute_with(|| {
-        // The `create_kitty` extrinsic should work when being called by a user.
-        assert_ok!(PalletKitties::create_kitty(RuntimeOrigin::signed(ALICE)));
-        // The `create_kitty` extrinsic should fail when being called by an unsigned message.
-        assert_noop!(PalletKitties::create_kitty(RuntimeOrigin::none()), DispatchError::BadOrigin);
-    })
+	new_test_ext().execute_with(|| {
+		// The `create_kitty` extrinsic should work when being called by a user.
+		assert_ok!(PalletKitties::create_kitty(RuntimeOrigin::signed(ALICE)));
+		// The `create_kitty` extrinsic should fail when being called by an unsigned message.
+		assert_noop!(PalletKitties::create_kitty(RuntimeOrigin::none()), DispatchError::BadOrigin);
+	})
 }
 
 #[test]
@@ -131,12 +132,3 @@ fn count_for_kitties_created_correctly() {
 		assert_eq!(CountForKitties::<TestRuntime>::get(), 1337u32);
 	})
 }
-
-// #[test]
-// fn dna() {
-// 	new_test_ext().execute_with(|| {
-// 		let one = PalletKitties::create_kitty(RuntimeOrigin::signed(ALICE)).expect("Should work");
-// 		let two = PalletKitties::create_kitty(RuntimeOrigin::signed(ALICE)).expect("Should work");
-
-// 	})
-// }
