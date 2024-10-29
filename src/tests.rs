@@ -27,6 +27,7 @@ type Block = frame_system::mocking::MockBlock<TestRuntime>;
 // We create the constants `ALICE` and `BOB` to make it clear when we are representing users below.
 const ALICE: u64 = 1;
 const BOB: u64 = 2;
+const DEFAULT_KITTY: Kitty<TestRuntime> = Kitty { dna: [0u8; 32], owner: 0 };
 
 // Our blockchain tests only need 3 Pallets:
 // 1. System: Which is included with every FRAME runtime.
@@ -122,11 +123,20 @@ fn create_kitty_emits_events() {
 fn count_for_kitties_created_correctly() {
 	new_test_ext().execute_with(|| {
 		// Querying storage before anything is set will return `None`.
-		assert_eq!(CountForKitties::<TestRuntime>::get(), None);
+		assert_eq!(CountForKitties::<TestRuntime>::get(), 0);
 		// You can `set` the value using an `Option<u32>`.
-		CountForKitties::<TestRuntime>::set(Some(1337u32));
+		CountForKitties::<TestRuntime>::set(1337u32);
 		// You can `put` the value directly with a `u32`.
 		CountForKitties::<TestRuntime>::put(1337u32);
-		assert_eq!(CountForKitties::<TestRuntime>::get(), Some(1337u32));
+		assert_eq!(CountForKitties::<TestRuntime>::get(), 1337u32);
 	})
 }
+
+// #[test]
+// fn dna() {
+// 	new_test_ext().execute_with(|| {
+// 		let one = PalletKitties::create_kitty(RuntimeOrigin::signed(ALICE)).expect("Should work");
+// 		let two = PalletKitties::create_kitty(RuntimeOrigin::signed(ALICE)).expect("Should work");
+
+// 	})
+// }
