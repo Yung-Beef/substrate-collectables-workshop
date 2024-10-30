@@ -95,4 +95,27 @@ impl<T: Config> Pallet<T> {
 		Self::deposit_event(Event::<T>::Abandonded { kitty_id });
 		Ok(())
 	}
+
+	pub fn do_breed(
+		caller: T::AccountId,
+		kitty_one: [u8; 32],
+		kitty_two: [u8; 32],
+	) -> DispatchResult {
+		let kitty_one = Kitties::<T>::get(kitty_one).ok_or(Error::<T>::NoKitty)?;
+		ensure!(caller == kitty_one.owner, Error::<T>::NotOwner);
+		let kitty_two = Kitties::<T>::get(kitty_two).ok_or(Error::<T>::NoKitty)?;
+		ensure!(caller == kitty_two.owner, Error::<T>::NotOwner);
+
+		let unique_payload = (kitty_one.dna, kitty_two.dna);
+		let new_dna: [u8; 32] = BlakeTwo256::hash_of(&unique_payload).into();
+
+		Self::mint(caller, new_dna)?;
+
+		Self::deposit_event(Event::<T>::Bred {
+			kitty_one: kitty_one.dna,
+			kitty_two: kitty_two.dna,
+			new_kitty: new_dna,
+		});
+		Ok(())
+	}
 }

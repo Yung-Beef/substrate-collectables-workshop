@@ -17,6 +17,8 @@ use frame::deps::sp_io;
 use frame::runtime::prelude::*;
 use frame::testing_prelude::*;
 use frame::traits::fungible::*;
+use frame::primitives::BlakeTwo256;
+use polkadot_sdk_frame::traits::Hash;
 
 type Balance = u64;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
@@ -416,9 +418,7 @@ fn do_abandon_emits_event() {
 		let _ = PalletKitties::abandon(RuntimeOrigin::signed(ALICE), kitty_id);
 
 		// Assert the last event by our blockchain is the `Abandoned` event with the correct owner.
-		System::assert_last_event(
-			Event::<TestRuntime>::Abandonded { kitty_id }.into(),
-		);
+		System::assert_last_event(Event::<TestRuntime>::Abandonded { kitty_id }.into());
 	})
 }
 
@@ -437,7 +437,10 @@ fn do_abandon_removes_from_storage() {
 fn do_abandon_no_kitty() {
 	new_test_ext().execute_with(|| {
 		let kitty_id = [1u8; 32];
-		assert_noop!(PalletKitties::abandon(RuntimeOrigin::signed(ALICE), kitty_id), Error::<TestRuntime>::NoKitty);
+		assert_noop!(
+			PalletKitties::abandon(RuntimeOrigin::signed(ALICE), kitty_id),
+			Error::<TestRuntime>::NoKitty
+		);
 	})
 }
 
@@ -446,6 +449,62 @@ fn do_abandon_not_owner() {
 	new_test_ext().execute_with(|| {
 		let kitty_id = [1u8; 32];
 		let _ = PalletKitties::mint(ALICE, kitty_id);
-		assert_noop!(PalletKitties::abandon(RuntimeOrigin::signed(BOB), kitty_id), Error::<TestRuntime>::NotOwner);
+		assert_noop!(
+			PalletKitties::abandon(RuntimeOrigin::signed(BOB), kitty_id),
+			Error::<TestRuntime>::NotOwner
+		);
+	})
+}
+
+#[test]
+fn do_breed_logic_works() {
+	new_test_ext().execute_with(|| {
+		PalletKitties::mint(ALICE, [1u8; 32]);
+		PalletKitties::mint(ALICE, [2u8; 32]);
+		PalletKitties::mint(BOB, [3u8; 32]);
+		let kitty_one = Kitties::<TestRuntime>::get([1u8; 32]).unwrap();
+		let kitty_two = Kitties::<TestRuntime>::get([2u8; 32]).unwrap();
+		let kitty_three = Kitties::<TestRuntime>::get([3u8; 32]).unwrap();
+
+		assert_eq!(kitty_one.owner, ALICE);
+		assert_eq!(kitty_two.owner, ALICE);
+		assert_eq!(kitty_three.owner, BOB);
+		assert_eq!(KittiesOwned::<TestRuntime>::get(ALICE), vec![kitty_one.dna, kitty_two.dna]);
+		assert_eq!(KittiesOwned::<TestRuntime>::get(BOB), vec![kitty_three.dna]);
+
+		// Cannot breed with kitties you do not own.
+		assert_noop!(
+			PalletKitties::breed(RuntimeOrigin::signed(BOB), kitty_one.dna, kitty_two.dna),
+			Error::<TestRuntime>::NotOwner
+		);
+
+		// Cannot breed with a kitty you do not own.
+		assert_noop!(
+			PalletKitties::breed(RuntimeOrigin::signed(ALICE), kitty_one.dna, kitty_three.dna),
+			Error::<TestRuntime>::NotOwner
+		);
+
+		// Cannot breed with a kitty that doesn't exist.
+		assert_noop!(
+			PalletKitties::breed(RuntimeOrigin::signed(ALICE), kitty_one.dna, [4u8; 32]),
+			Error::<TestRuntime>::NoKitty
+		);
+
+		// Cannot breed with two kitties that don't exist.
+		assert_noop!(
+			PalletKitties::breed(RuntimeOrigin::signed(ALICE), [0u8; 32], [4u8; 32]),
+			Error::<TestRuntime>::NoKitty
+		);
+
+		// Can breed two kitties you own.
+		assert_ok!(PalletKitties::breed(RuntimeOrigin::signed(ALICE), kitty_one.dna, kitty_two.dna));
+
+		// Storage is updated.
+		let unique_payload = (kitty_one.dna, kitty_two.dna);
+		let new_dna: [u8; 32] = BlakeTwo256::hash_of(&unique_payload).into();
+
+		assert_eq!(Kitties::<TestRuntime>::contains_key(new_dna), true);
+		let new_kitty = Kitties::<TestRuntime>::get(new_dna).unwrap();
+		assert_eq!(new_kitty.owner, ALICE);
 	})
 }

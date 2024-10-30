@@ -54,6 +54,7 @@ pub mod pallet {
 		PriceSet { owner: T::AccountId, kitty_id: [u8; 32], new_price: Option<BalanceOf<T>> },
 		Sold { buyer: T::AccountId, kitty_id: [u8; 32], price: BalanceOf<T> },
 		Abandonded { kitty_id: [u8; 32] },
+		Bred { kitty_one: [u8; 32], kitty_two: [u8; 32], new_kitty: [u8; 32] },
 	}
 
 	#[pallet::error]
@@ -109,6 +110,16 @@ pub mod pallet {
 		pub fn abandon(origin: OriginFor<T>, kitty_id: [u8; 32]) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_abandon(who, kitty_id)?;
+			Ok(())
+		}
+
+		pub fn breed(
+			origin: OriginFor<T>,
+			kitty_one: [u8; 32],
+			kitty_two: [u8; 32],
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::do_breed(who, kitty_one, kitty_two)?;
 			Ok(())
 		}
 	}
