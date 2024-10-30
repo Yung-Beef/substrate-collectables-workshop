@@ -1,6 +1,8 @@
 use super::*;
 use frame::prelude::*;
 use frame::primitives::BlakeTwo256;
+use frame::traits::fungible::Mutate;
+use frame::traits::tokens::Preservation;
 use frame::traits::Hash;
 
 impl<T: Config> Pallet<T> {
@@ -50,6 +52,37 @@ impl<T: Config> Pallet<T> {
 		KittiesOwned::<T>::insert(&from, from_owned);
 
 		Self::deposit_event(Event::<T>::Transferred { from, to, kitty_id });
+		Ok(())
+	}
+
+	pub fn do_set_price(
+		caller: T::AccountId,
+		kitty_id: [u8; 32],
+		new_price: Option<BalanceOf<T>>,
+	) -> DispatchResult {
+		let mut kitty = Kitties::<T>::get(kitty_id).ok_or(Error::<T>::NoKitty)?;
+		ensure!(caller == kitty.owner, Error::<T>::NotOwner);
+		kitty.price = new_price;
+		Kitties::<T>::insert(kitty_id, kitty);
+
+		Self::deposit_event(Event::<T>::PriceSet { owner: caller, kitty_id, new_price: new_price });
+		Ok(())
+	}
+
+	pub fn do_buy_kitty(
+		buyer: T::AccountId,
+		kitty_id: [u8; 32],
+		price: BalanceOf<T>,
+	) -> DispatchResult {
+		let kitty = Kitties::<T>::get(kitty_id).ok_or(Error::<T>::NoKitty)?;
+		let real_price = kitty.price.ok_or(Error::<T>::NotForSale)?;
+		ensure!(price >= real_price, Error::<T>::MaxPriceTooLow);
+
+		T::NativeBalance::transfer(&buyer, &kitty.owner, real_price, Preservation::Preserve)?;
+
+		Self::do_transfer(kitty.owner, buyer.clone(), kitty_id)?;
+
+		Self::deposit_event(Event::<T>::Sold { buyer, kitty_id, price: real_price });
 		Ok(())
 	}
 }
