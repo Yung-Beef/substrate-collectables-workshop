@@ -65,7 +65,7 @@ impl<T: Config> Pallet<T> {
 		kitty.price = new_price;
 		Kitties::<T>::insert(kitty_id, kitty);
 
-		Self::deposit_event(Event::<T>::PriceSet { owner: caller, kitty_id, new_price: new_price });
+		Self::deposit_event(Event::<T>::PriceSet { owner: caller, kitty_id, new_price });
 		Ok(())
 	}
 
@@ -83,6 +83,16 @@ impl<T: Config> Pallet<T> {
 		Self::do_transfer(kitty.owner, buyer.clone(), kitty_id)?;
 
 		Self::deposit_event(Event::<T>::Sold { buyer, kitty_id, price: real_price });
+		Ok(())
+	}
+
+	pub fn do_abandon(caller: T::AccountId, kitty_id: [u8; 32]) -> DispatchResult {
+		let kitty = Kitties::<T>::get(kitty_id).ok_or(Error::<T>::NoKitty)?;
+		ensure!(caller == kitty.owner, Error::<T>::NotOwner);
+
+		Kitties::<T>::remove(kitty_id);
+
+		Self::deposit_event(Event::<T>::Abandonded { kitty_id });
 		Ok(())
 	}
 }
