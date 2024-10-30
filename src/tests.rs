@@ -18,7 +18,7 @@ use frame::runtime::prelude::*;
 use frame::testing_prelude::*;
 use frame::traits::fungible::*;
 use frame::primitives::BlakeTwo256;
-use polkadot_sdk_frame::traits::Hash;
+use frame::traits::Hash;
 
 type Balance = u64;
 type Block = frame_system::mocking::MockBlock<TestRuntime>;
@@ -459,9 +459,9 @@ fn do_abandon_not_owner() {
 #[test]
 fn do_breed_logic_works() {
 	new_test_ext().execute_with(|| {
-		PalletKitties::mint(ALICE, [1u8; 32]);
-		PalletKitties::mint(ALICE, [2u8; 32]);
-		PalletKitties::mint(BOB, [3u8; 32]);
+		let _ = PalletKitties::mint(ALICE, [1u8; 32]);
+		let _ = PalletKitties::mint(ALICE, [2u8; 32]);
+		let _ = PalletKitties::mint(BOB, [3u8; 32]);
 		let kitty_one = Kitties::<TestRuntime>::get([1u8; 32]).unwrap();
 		let kitty_two = Kitties::<TestRuntime>::get([2u8; 32]).unwrap();
 		let kitty_three = Kitties::<TestRuntime>::get([3u8; 32]).unwrap();
